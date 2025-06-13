@@ -73,7 +73,7 @@ function FloatingPaths({ position }: { position: number }) {
     return (
         <div className="absolute inset-0 pointer-events-none">
             <svg
-                className="w-full h-full text-slate-950 dark:text-white"
+                className="w-full h-full text-slate-900" // 移除了 dark:text-white
                 viewBox="0 0 696 316"
                 fill="none"
             >
@@ -103,8 +103,28 @@ function FloatingPaths({ position }: { position: number }) {
     );
 }
 
+// **修复**: 为问卷题目和表单数据定义清晰的 TypeScript 类型
+interface Question {
+  id: string;
+  text: string;
+  type: 'radio' | 'checkbox' | 'text' | 'textarea' | 'radio_with_text';
+  options?: string[];
+  description?: string;
+  note?: string;
+  textPrompt?: string;
+  dependsOn?: {
+    qId: string;
+    value: string;
+  };
+}
+
+type FormData = {
+  [key: string]: string | string[];
+};
+
+
 // -- 问卷题目数据 --
-const surveyQuestions = [
+const surveyQuestions: Question[] = [
     { id: 'q1', text: '您的年龄段是？', type: 'radio', options: ['A. 18-25岁', 'B. 26-35岁', 'C. 36-45岁', 'D. 46-55岁', 'E. 55岁以上'] },
     { id: 'q2', text: '您目前的职业或身份是？', type: 'radio', options: ['A. 在校学生', 'B. 企业主/合伙人', 'C. 公司高管', 'D. 企业普通职员', 'E. 自由职业者', 'F. 其他 (请注明)'] },
     { id: 'q3', text: '您目前常住的国家/地区是？', type: 'text', description: '了解客户的地域来源，有助于分析跨国业务需求。' },
@@ -141,7 +161,7 @@ const surveyQuestions = [
 // -- 问卷表单组件 --
 // 功能: 渲染整个问卷，并处理用户输入和提交逻辑
 function SurveyForm() {
-    const [formData, setFormData] = useState<{[key: string]: any}>({});
+    const [formData, setFormData] = useState<FormData>({});
     const [status, setStatus] = useState('idle'); // idle, submitting, success, error
 
     const handleChange = (qId: string, value: string) => {
@@ -149,11 +169,11 @@ function SurveyForm() {
     };
 
     const handleCheckboxChange = (qId: string, option: string, isChecked: boolean) => {
-        const currentOptions = formData[qId] || [];
+        const currentOptions = (formData[qId] as string[]) || [];
         const newOptions = isChecked 
             ? [...currentOptions, option]
             : currentOptions.filter((o: string) => o !== option);
-        handleChange(qId, newOptions);
+        handleChange(qId, newOptions as any); // 使用 as any 临时解决类型问题
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -184,23 +204,23 @@ function SurveyForm() {
         }
     };
     
-    const renderQuestion = (q: any) => {
+    const renderQuestion = (q: Question) => {
       if (q.dependsOn && formData[q.dependsOn.qId] !== q.dependsOn.value) {
           return null;
       }
       
-      const questionCard = "bg-white/80 dark:bg-black/80 backdrop-blur-sm p-4 sm:p-6 rounded-lg shadow-md mb-6 border border-slate-200/50 dark:border-slate-800/50 text-left";
-      const questionText = "text-md sm:text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4";
-      const descriptionText = "text-sm text-slate-600 dark:text-slate-400 mb-4";
-      const noteText = "text-xs text-slate-500 dark:text-slate-500 ml-2";
+      const questionCard = "bg-white/80 backdrop-blur-sm p-4 sm:p-6 rounded-lg shadow-md mb-6 border border-slate-200/50 text-left";
+      const questionText = "text-md sm:text-lg font-semibold text-slate-800 mb-4";
+      const descriptionText = "text-sm text-slate-600 mb-4";
+      const noteText = "text-xs text-slate-500 ml-2";
 
       return (
         <div key={q.id} className={questionCard}>
           <p className={questionText}>{q.text} {q.note && <span className={noteText}>({q.note})</span>}</p>
           {q.description && <p className={descriptionText}>{q.description}</p>}
           
-          { (q.type === 'radio' || q.type === 'radio_with_text') && q.options.map((option: string) => (
-            <label key={option} className="flex items-center text-slate-700 dark:text-slate-300 mb-2 cursor-pointer p-1">
+          { (q.type === 'radio' || q.type === 'radio_with_text') && q.options?.map((option: string) => (
+            <label key={option} className="flex items-center text-slate-700 mb-2 cursor-pointer p-1">
               <input type="radio" name={q.id} value={option} onChange={(e) => handleChange(q.id, e.target.value)} className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"/>
               {option}
             </label>
@@ -210,12 +230,12 @@ function SurveyForm() {
             <textarea
               placeholder={q.textPrompt}
               onChange={(e) => handleChange(`${q.id}_details`, e.target.value)}
-              className="mt-2 w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white/50 dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="mt-2 w-full p-2 border border-slate-300 rounded-md bg-white/50 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           )}
 
-          { q.type === 'checkbox' && q.options.map((option: string) => (
-            <label key={option} className="flex items-center text-slate-700 dark:text-slate-300 mb-2 cursor-pointer p-1">
+          { q.type === 'checkbox' && q.options?.map((option: string) => (
+            <label key={option} className="flex items-center text-slate-700 mb-2 cursor-pointer p-1">
               <input type="checkbox" onChange={(e) => handleCheckboxChange(q.id, option, e.target.checked)} className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"/>
               {option}
             </label>
@@ -225,7 +245,7 @@ function SurveyForm() {
             <input
               type="text"
               onChange={(e) => handleChange(q.id, e.target.value)}
-              className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white/50 dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-2 border border-slate-300 rounded-md bg-white/50 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           )}
 
@@ -233,7 +253,7 @@ function SurveyForm() {
             <textarea
               rows={4}
               onChange={(e) => handleChange(q.id, e.target.value)}
-              className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white/50 dark:bg-black/50 focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-2 border border-slate-300 rounded-md bg-white/50 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           )}
         </div>
@@ -266,7 +286,7 @@ function ApexSurveyComponent({
     return (
         <div className="relative w-full min-h-screen">
             {/* 背景层：包含颜色和动画 */}
-            <div className="fixed inset-0 -z-10 bg-white dark:bg-neutral-950">
+            <div className="fixed inset-0 -z-10 bg-white">
                 <FloatingPaths position={1} />
                 <FloatingPaths position={-1} />
             </div>
@@ -294,7 +314,7 @@ function ApexSurveyComponent({
                                                 stiffness: 150,
                                                 damping: 25,
                                             }}
-                                            className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 to-neutral-700/80 dark:from-white dark:to-white/80"
+                                            className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 to-neutral-700/80"
                                         >
                                             {letter}
                                         </motion.span>
