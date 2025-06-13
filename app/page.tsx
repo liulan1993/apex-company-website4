@@ -164,7 +164,8 @@ function SurveyForm() {
     const [formData, setFormData] = useState<FormData>({});
     const [status, setStatus] = useState('idle'); // idle, submitting, success, error
 
-    const handleChange = (qId: string, value: string) => {
+    // **最终修复**: 允许 handleChange 接收字符串或字符串数组，以处理所有类型的输入
+    const handleChange = (qId: string, value: string | string[]) => {
         setFormData(prev => ({ ...prev, [qId]: value }));
     };
 
@@ -173,7 +174,8 @@ function SurveyForm() {
         const newOptions = isChecked 
             ? [...currentOptions, option]
             : currentOptions.filter((o: string) => o !== option);
-        handleChange(qId, newOptions as any); // 使用 as any 临时解决类型问题
+        // **最终修复**: 直接调用更新后的 handleChange，不再需要 `as any`
+        handleChange(qId, newOptions);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
